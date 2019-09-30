@@ -1,0 +1,23 @@
+{
+  "name": "docker-screammachine",
+  "version": "1.0.0",
+  "description": "A docker image that alerts in slack if something fishy is happening in streammachine",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StreamMachine/docker-screammachine.git"
+  },
+  "keywords": [
+    "alert"
+  ],
+  "author": "SCPR Devs",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/StreamMachine/docker-screammachine/issues"
+  },
+  "homepage": "https://github.com/StreamMachine/docker-screammachine#readme",
+  "dependencies": {}
+}
