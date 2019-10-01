@@ -1,9 +1,13 @@
 const http = require('http');
 const https = require('https');
+
 const SOURCE_URL = process.env.SOURCE_URL;
 const SECONDS_OFFSET = process.env.SECONDS_OFFSET;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const PREPEND_MESSAGE = process.env.PREPEND_MESSAGE || ':cry:';
+
+// JSON file that contains the body to POST to streammachine when creating streams.
+const streamsJson = require('./streams.json');
 
 const notify = function(err) {
   const data = JSON.stringify({
@@ -29,6 +33,54 @@ const notify = function(err) {
   req.write(data);
   req.end();
 };
+
+const createStream = function(streamKey) {
+  const config = JSON.stringify(streamsJson[streamKey]);
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': config.length
+    }
+  };
+
+  const req = http.request(SOURCE_URL, options, (resp) => {
+    let data = '';
+    resp.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    resp.on('end', () => {
+      console.log(data)
+    });
+  });
+
+  req.on('error', (error) => {
+    console.error("Error creating to stream: " + streamKey);
+    console.error(error);
+  });
+
+
+  req.write(config);
+  req.end();
+};
+
+
+const recreateStream = function(streamKey) {
+  console.log(`deleting stream: ${streamKey}`);
+  const deleteUrl = `${SOURCE_URL}/${streamKey}`;
+  const options = {
+    method: 'DELETE'
+  };
+
+  const req = http.request(deleteUrl, options, (resp) => {
+    resp.on('data', () => {
+      createStream(streamKey);
+    });
+  });
+  req.end();
+};
+
 
 if (SOURCE_URL === undefined) {
   console.error("No SOURCE_URL");
@@ -67,8 +119,16 @@ http.get(SOURCE_URL, (resp) => {
         return;
       }
       const diff = now - new Date(last_ts);
+
+      // Uh oh, something is fishy with the stream. Throw an alert
+      // and then try to fix it by deleting the stream and re-creating it.
       if (diff > (SECONDS_OFFSET * 1000)) {
         notify(`Source \`${stream.key}\` is more than ${SECONDS_OFFSET} second(s) behind. It's ${Math.round(diff/1000)} second(s) behind.`);
+        if (streamsJson[stream.key] !== undefined) {
+          recreateStream(stream.key);
+        }
+      } else {
+        console.log(`${stream.key} stream okay`);
       }
     });
   });

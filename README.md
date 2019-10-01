@@ -5,6 +5,11 @@ It does a request to streammachine's `/api/streams` endpoint and looks at the
 `last_ts` attribute of each stream.  If that timestamp is more than `SECONDS_OFFSET`
 behind, it posts a message to a slack webhook.
 
+If you've provided a `streams.json` in the same directory as `index.json` or mount
+it as a volume into your container, this script will also look to see if there
+is a stream that it can recreate from it. If it can, it will delete that existing
+stream from primary and recreate it.
+
 ## requirements
 
 * slack webhook url (https://api.slack.com/incoming-webhooks)
