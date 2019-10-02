@@ -13,7 +13,6 @@ const notify = function(err) {
   const data = JSON.stringify({
     text: `${PREPEND_MESSAGE} ${err}`
   });
-
   const options = {
     method: 'POST',
     headers: {
@@ -101,21 +100,22 @@ http.get(SOURCE_URL, (resp) => {
   });
 
   resp.on('end', () => {
+    let notify_body = [];
     const body = JSON.parse(data);
     if (body.length === 0) {
-      notify("No streams found.");
+      notify_body.push("No streams found.");
       return;
     }
     body.forEach((stream) => {
       const source = stream.source;
       if (source === undefined) {
-        notify(`No source for: ${stream.key}`);
+        notify_body.push(`No source for: ${stream.key}`);
         return;
       }
       const last_ts = source.last_ts;
       const now = new Date();
       if (last_ts === undefined) {
-        notify("Could not find last_ts attribute");
+        notify_body.push("Could not find last_ts attribute");
         return;
       }
       const diff = now - new Date(last_ts);
@@ -123,7 +123,7 @@ http.get(SOURCE_URL, (resp) => {
       // Uh oh, something is fishy with the stream. Throw an alert
       // and then try to fix it by deleting the stream and re-creating it.
       if (diff > (SECONDS_OFFSET * 1000)) {
-        notify(`Source \`${stream.key}\` is more than ${SECONDS_OFFSET} second(s) behind. It's ${Math.round(diff/1000)} second(s) behind.`);
+        notify_body.push(`Source \`${stream.key}\` is more than ${SECONDS_OFFSET} second(s) behind. It's ${Math.round(diff/1000)} second(s) behind.`);
         if (streamsJson[stream.key] !== undefined) {
           recreateStream(stream.key);
         }
@@ -131,7 +131,11 @@ http.get(SOURCE_URL, (resp) => {
         console.log(`${stream.key} stream okay`);
       }
     });
+    if (notify_body.length > 0) {
+      notify(notify_body.join("\n"));
+    }
   });
 }).on("error", (err) => {
   notify(err.message);
 });
+
