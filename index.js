@@ -5,6 +5,8 @@ const SOURCE_URL = process.env.SOURCE_URL;
 const SECONDS_OFFSET = process.env.SECONDS_OFFSET;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 const PREPEND_MESSAGE = process.env.PREPEND_MESSAGE || ':cry:';
+const LOW_LISTENERS_THRESHOLD = process.env.LOW_LISTENERS_THRESHOLD;
+const STREAMDASH_HOURS_URL = process.env.STREAMDASH_HOURS_URL;
 
 // JSON file that contains the body to POST to streammachine when creating streams.
 const streamsJson = require('./streams.json');
@@ -138,4 +140,27 @@ http.get(SOURCE_URL, (resp) => {
 }).on("error", (err) => {
   notify(err.message);
 });
+
+if (LOW_LISTENERS_THRESHOLD && STREAMDASH_HOURS_URL) {
+  http.get(STREAMDASH_HOURS_URL, (resp) => {
+    let data = '';
+
+    resp.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    resp.on('end', () => {
+      let notify_body = [];
+      const body = JSON.parse(data);
+      if (body === undefined) {
+        return;
+      }
+      console.log(`listeners count was ${body.listens.listeners}`);
+      if (body.listens.listeners < LOW_LISTENERS_THRESHOLD) {
+        notify(`Listeners count (${body.listens.listeners}) fell below threshold (${LOW_LISTENERS_THRESHOLD}).` +
+          `Something may be wrong with the stream. Check out Streamdash: ${STREAMDASH_HOURS_URL}`);
+      }
+    });
+  });
+}
 
